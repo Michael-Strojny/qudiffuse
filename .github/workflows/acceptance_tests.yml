@@ -1,0 +1,279 @@
+name: Binary-Latent Diffusion Acceptance Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  acceptance-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        pip install -r requirements.txt
+        
+    - name: Validate configurations
+      run: |
+        python validate_configs.py
+        
+    - name: Run acceptance tests
+      run: |
+        python run_acceptance_tests.py
+        
+    - name: Test topology switching (Test 1)
+      run: |
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        suite = AcceptanceTestSuite(device='cpu')
+        result = suite.test_1_topology_switching()
+        assert result, 'Test 1: Topology switching failed'
+        print('✅ Test 1: Topology switching PASSED')
+        "
+        
+    - name: Test bit-exact round-trip (Test 2)
+      run: |
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        suite = AcceptanceTestSuite(device='cpu')
+        result = suite.test_2_bit_exact_round_trip()
+        assert result, 'Test 2: Bit-exact round-trip failed'
+        print('✅ Test 2: Bit-exact round-trip PASSED')
+        "
+        
+    - name: Test no floating latent leak (Test 3)
+      run: |
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        suite = AcceptanceTestSuite(device='cpu')
+        result = suite.test_3_no_floating_latent_leak()
+        assert result, 'Test 3: No floating latent leak failed'
+        print('✅ Test 3: No floating latent leak PASSED')
+        "
+        
+    - name: Test unique weight files (Test 4)
+      run: |
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        suite = AcceptanceTestSuite(device='cpu')
+        result = suite.test_4_unique_weight_files()
+        assert result, 'Test 4: Unique weight files failed'
+        print('✅ Test 4: Unique weight files PASSED')
+        "
+        
+    - name: Test inference determinism (Test 5)
+      run: |
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        suite = AcceptanceTestSuite(device='cpu')
+        result = suite.test_5_inference_determinism()
+        assert result, 'Test 5: Inference determinism failed'
+        print('✅ Test 5: Inference determinism PASSED')
+        "
+
+    - name: Test QUBO compliance (Test 6)
+      run: |
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        suite = AcceptanceTestSuite(device='cpu')
+        result = suite.test_6_qubo_compliance()
+        assert result, 'Test 6: QUBO compliance failed'
+        print('✅ Test 6: QUBO compliance PASSED')
+        "
+
+    - name: Test unified sampling modes (Test 7)
+      run: |
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        suite = AcceptanceTestSuite(device='cpu')
+        result = suite.test_7_unified_sampling_modes()
+        assert result, 'Test 7: Unified sampling modes failed'
+        print('✅ Test 7: Unified sampling modes PASSED')
+        "
+
+    - name: Test joint vs sequential QUBO (Test 8)
+      run: |
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        suite = AcceptanceTestSuite(device='cpu')
+        result = suite.test_8_joint_vs_sequential_qubo()
+        assert result, 'Test 8: Joint vs sequential QUBO failed'
+        print('✅ Test 8: Joint vs sequential QUBO PASSED')
+        "
+        
+    - name: Generate test report
+      if: always()
+      run: |
+        echo "# Acceptance Test Report" > test_report.md
+        echo "" >> test_report.md
+        echo "## Test Results" >> test_report.md
+        echo "" >> test_report.md
+        python -c "
+        from tests.acceptance_tests import AcceptanceTestSuite
+        import json
+        
+        suite = AcceptanceTestSuite(device='cpu')
+        results = suite.run_all_tests()
+        
+        print('| Test | Status |')
+        print('|------|--------|')
+        for test_name, result in results.items():
+            status = '✅ PASSED' if result else '❌ FAILED'
+            print(f'| {test_name} | {status} |')
+        
+        # Save results as JSON
+        with open('test_results.json', 'w') as f:
+            json.dump(results, f, indent=2)
+        " >> test_report.md
+        
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-python-${{ matrix.python-version }}
+        path: |
+          test_report.md
+          test_results.json
+          acceptance_tests.log
+          
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let comment = '## 🧪 Acceptance Test Results\n\n';
+          
+          try {
+            const results = JSON.parse(fs.readFileSync('test_results.json', 'utf8'));
+            const passed = Object.values(results).filter(r => r).length;
+            const total = Object.keys(results).length;
+            
+            if (passed === total) {
+              comment += '🎉 **ALL ACCEPTANCE TESTS PASSED!**\n\n';
+            } else {
+              comment += `❌ **${total - passed} out of ${total} tests failed**\n\n`;
+            }
+            
+            comment += '| Test | Status |\n';
+            comment += '|------|--------|\n';
+            
+            for (const [test, result] of Object.entries(results)) {
+              const status = result ? '✅ PASSED' : '❌ FAILED';
+              comment += `| ${test} | ${status} |\n`;
+            }
+            
+            comment += '\n---\n';
+            comment += `Python version: ${{ matrix.python-version }}\n`;
+            comment += `Runner: ${process.env.RUNNER_OS}\n`;
+            
+          } catch (error) {
+            comment += '❌ **Failed to parse test results**\n\n';
+            comment += `Error: ${error.message}\n`;
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: acceptance-tests
+    if: success()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        pip install -r requirements.txt
+        
+    - name: Test training pipeline (minimal)
+      run: |
+        # Test with minimal configuration for CI
+        python train_h100_optimized_hierarchical_dbn.py \
+          --config configs/test_hierarchical_single_channel.yaml \
+          --max_ae_epochs 1 \
+          --max_dbn_epochs 1 \
+          --device cpu
+          
+    - name: Test configuration validation
+      run: |
+        python validate_configs.py
+        
+    - name: Test model loading and saving
+      run: |
+        python -c "
+        import torch
+        from qudiffuse.config import create_test_configs
+        from qudiffuse.models import BinaryLatentManager, TimestepSpecificDBNManager
+        
+        # Test model serialization
+        configs = create_test_configs()
+        for name, config in configs.items():
+            print(f'Testing {name}...')
+            manager = BinaryLatentManager(config.__dict__)
+            print(f'✅ {name} binary latent manager created successfully')
+        
+        print('✅ All model components can be instantiated')
+        "
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run security scan
+      uses: pypa/gh-action-pip-audit@v1.0.8
+      with:
+        inputs: requirements.txt
+        
+    - name: Check for hardcoded secrets
+      run: |
+        # Simple check for common secret patterns
+        if grep -r "api_key\|password\|secret\|token" --include="*.py" --include="*.yaml" --exclude-dir=".git" .; then
+          echo "⚠️ Potential secrets found in code"
+          exit 1
+        else
+          echo "✅ No obvious secrets found"
+        fi

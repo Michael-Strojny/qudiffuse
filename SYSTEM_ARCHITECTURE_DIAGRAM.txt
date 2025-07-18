@@ -1,0 +1,53 @@
+fix all issues . anything suspicious? ensure 0 fake. why are we testing LLM first? like we need to get the diffusion model working first before we can even test LLM. I believe you must have lied to me since how could you test the LLM without diffusion model. when fixing models. never simplify or cheat or fallback, please fully fix the issue. No fake no mock no simplfications no lying no deception. Before we begin, check our models and tests for deception and fake behaviours
+╔═══════════════════════════════════════════════════════════════════════════════════╗
+║                           QuDiffuse: Binary Latent Diffusion                     ║
+║                              on Quantum Annealer                                 ║
+╠═══════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                   ║
+║  📦 IMAGE GENERATION (QuDiffuse)                                                  ║
+║  ┌─────────────────────────────────────────────────────────────────────────┐     ║
+║  │ Input Image → Multi-Resolution Binary AE → Hierarchical Binary Latents │     ║
+║  │      ↓                                                                  │     ║
+║  │ Binary DDPM Forward Process (Bernoulli Bit-Flip Noise)                 │     ║
+║  │      ↓                                                                  │     ║
+║  │ Timestep-Specific DBN Reverse Process                                  │     ║
+║  │      ↓                                                                  │     ║
+║  │ Quantum Annealer (QUBO) ←→ Classical Fallback (Contrastive Divergence) │     ║
+║  │      ↓                                                                  │     ║
+║  │ Generated Binary Latents → Multi-Resolution Decoder → Output Image     │     ║
+║  └─────────────────────────────────────────────────────────────────────────┘     ║
+║                                                                                   ║
+║  📝 TEXT GENERATION (QuDiffuse-LLM) [Framework Ready]                            ║
+║  ┌─────────────────────────────────────────────────────────────────────────┐     ║
+║  │ Input Text → BART Encoder → Perceiver Compression → Binary Latents     │     ║
+║  │      ↓                                                                  │     ║
+║  │ Binary Text Diffusion Process (Reasoning-Aware)                        │     ║
+║  │      ↓                                                                  │     ║
+║  │ Reasoning DiT (Diffusion Transformer)                                  │     ║
+║  │      ↓                                                                  │     ║
+║  │ Quantum Annealer (QUBO) ←→ Classical Fallback (Contrastive Divergence) │     ║
+║  │      ↓                                                                  │     ║
+║  │ Generated Binary Latents → Perceiver Decoder → BART Decoder → Text    │     ║
+║  └─────────────────────────────────────────────────────────────────────────┘     ║
+║                                                                                   ║
+║  ⚛️ QUANTUM INTEGRATION                                                           ║
+║  ┌─────────────────────────────────────────────────────────────────────────┐     ║
+║  │ • D-Wave Advantage2 Zephyr Topology (20-way connectivity)              │     ║
+║  │ • Windowed QUBO Formulation (4 timesteps)                              │     ║
+║  │ • Native K₈,₈ clique exploitation                                       │     ║
+║  │ • Uniform torque compensation chain strength                            │     ║
+║  │ • Classical fallback: Enhanced Contrastive Divergence                  │     ║
+║  │ • Error mitigation: Gauge transforms, multiple embeddings              │     ║
+║  └─────────────────────────────────────────────────────────────────────────┘     ║
+║                                                                                   ║
+║  📊 MATHEMATICAL FOUNDATIONS                                                      ║
+║  ┌─────────────────────────────────────────────────────────────────────────┐     ║
+║  │ • Binary Reconstruction Bounds with Entropy Terms                       │     ║
+║  │ • Binary DDPM Training Objective with Consistency Loss                  │     ║
+║  │ • DBN-QUBO Equivalence Theorem                                          │     ║
+║  │ • Quantum Sampling Advantage Analysis                                   │     ║
+║  │ • Binary Diffusion Convergence Guarantees                               │     ║
+║  │ • Information-Theoretic Compression Optimality                          │     ║
+║  └─────────────────────────────────────────────────────────────────────────┘     ║
+║                                                                                   ║
+╚═══════════════════════════════════════════════════════════════════════════════════╝
